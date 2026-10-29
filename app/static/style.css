@@ -1,0 +1,88 @@
+@font-face { font-family: "Bebas Neue"; src: url("fonts/bebas-neue-400.woff2"); }
+@font-face { font-family: "Questrial"; src: url("fonts/questrial-400.woff2"); }
+@font-face { font-family: "Montserrat"; src: url("fonts/montserrat-300.woff2"); font-weight: 300; }
+@font-face { font-family: "Montserrat"; src: url("fonts/montserrat-600.woff2"); font-weight: 600; }
+
+body {
+  margin: 0;
+  background: #333849;
+  color: #ffffff;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 300;
+  line-height: 1.6;
+}
+
+a { color: #ffffff; }
+
+h1 {
+  margin-top: 0;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 3rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* header, labels and buttons */
+header, label, th, button, .button {
+  font-family: "Questrial", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.8rem;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: #474c61;
+}
+
+header .brand { text-decoration: none; font-size: 0.95rem; }
+
+main { max-width: 800px; margin: 2.5rem auto; padding: 0 1rem; }
+
+.card { background: #474c61; border-radius: 4px; padding: 1.75rem; }
+.card.narrow { max-width: 420px; margin: 0 auto; }
+
+.title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.title-row h1 { margin: 0; }
+
+label { display: block; margin-bottom: 1rem; }
+
+input, textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.4rem;
+  padding: 0.6rem;
+  border: 1px solid #5b6176;
+  border-radius: 3px;
+  background: #2d3141;
+  color: #ffffff;
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+button, .button {
+  display: inline-block;
+  padding: 0.6rem 1.2rem;
+  border: 0;
+  border-radius: 3px;
+  background: #ffffff;
+  color: #333849;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button.link { background: none; color: #ffffff; padding: 0; margin-left: 1rem; }
+button.danger { background: #f08a80; margin-top: 1rem; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.6rem 0.4rem; border-bottom: 1px solid #5b6176; }
+
+.error { background: #4a3640; color: #f08a80; padding: 0.8rem 1rem; border-radius: 3px; }
+.notes { white-space: pre-wrap; }
+details { margin: 1rem 0; cursor: pointer; }
+code { background: #2d3141; padding: 0.2rem 0.4rem; }

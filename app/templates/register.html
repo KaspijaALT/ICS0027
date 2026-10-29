@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card narrow">
+  <h1>Create account</h1>
+  <form method="post" action="/register">
+    <label>Username <input name="username" value="{{ username or '' }}" required></label>
+    <label>Master password (at least 12 characters)
+      <input type="password" name="password" required minlength="12">
+    </label>
+    <label>Repeat master password <input type="password" name="password2" required></label>
+    <button type="submit">Create account</button>
+  </form>
+  <p>Already registered? <a href="/login">Log in</a></p>
+</div>
+{% endblock %}

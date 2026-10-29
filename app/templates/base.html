@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Secure Password Manager</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">Secure Password Manager</a>
+    {% if session %}
+    <form method="post" action="/logout">
+      {{ session.username }}
+      <button type="submit" class="link">Log out</button>
+    </form>
+    {% endif %}
+  </header>
+  <main>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

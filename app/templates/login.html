@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card narrow">
+  <h1>Log in</h1>
+  <form method="post" action="/login">
+    <label>Username <input name="username" value="{{ username or '' }}" required></label>
+    <label>Master password <input type="password" name="password" required></label>
+    <button type="submit">Log in</button>
+  </form>
+  <p>No account? <a href="/register">Create one</a></p>
+</div>
+{% endblock %}
