@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  {% if entry_id %}
+  <h1>Edit entry</h1>
+  <form method="post" action="/vault/{{ entry_id }}/edit">
+  {% else %}
+  <h1>New entry</h1>
+  <form method="post" action="/vault/new">
+  {% endif %}
+    <label>Title <input name="title" value="{{ entry.title or '' }}" required></label>
+    <label>Username <input name="username" value="{{ entry.username or '' }}"></label>
+    <label>Password <input type="password" name="password" value="{{ entry.password or '' }}"></label>
+    <label>Website URL <input name="url" value="{{ entry.url or '' }}" placeholder="https://"></label>
+    <label>Notes <textarea name="notes">{{ entry.notes or '' }}</textarea></label>
+    <button type="submit">Save</button>
+    <a href="/vault">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,7 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="card">
-  <h1>Your vault</h1>
+  <div class="title-row">
+    <h1>Your vault</h1>
+    <a class="button" href="/vault/new">Add entry</a>
+  </div>
+  {% if entries %}
+  <table>
+    <tr><th>Title</th><th>Username</th></tr>
+    {% for entry in entries %}
+    <tr>
+      <td><a href="/vault/{{ entry.id }}">{{ entry.title }}</a></td>
+      <td>{{ entry.username }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
   <p>Your vault is empty.</p>
+  {% endif %}
 </div>
 {% endblock %}

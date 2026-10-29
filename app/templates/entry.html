@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="/vault">Back to vault</a></p>
+<div class="card">
+  <div class="title-row">
+    <h1>{{ entry.title }}</h1>
+    <a class="button" href="/vault/{{ entry_id }}/edit">Edit</a>
+  </div>
+  <p><b>Username:</b> {{ entry.username }}</p>
+  <details>
+    <summary>Show password</summary>
+    <code>{{ entry.password }}</code>
+  </details>
+  {% if entry.url %}
+  <p><b>Website:</b> <a href="{{ entry.url }}" target="_blank" rel="noopener noreferrer">{{ entry.url }}</a></p>
+  {% endif %}
+  {% if entry.notes %}<p class="notes"><b>Notes:</b> {{ entry.notes }}</p>{% endif %}
+
+  <form method="post" action="/vault/{{ entry_id }}/delete">
+    <button type="submit" class="danger">Delete entry</button>
+  </form>
+</div>
+{% endblock %}
