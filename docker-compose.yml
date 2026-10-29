@@ -1,0 +1,17 @@
+# Optional PostgreSQL for development. The app uses SQLite unless DATABASE_URL is set:
+#   export DATABASE_URL=postgresql+psycopg://spm:spm_dev_password@localhost:5432/spm
+# These credentials are for local development only.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: spm
+      POSTGRES_PASSWORD: spm_dev_password
+      POSTGRES_DB: spm
+    ports:
+      - "127.0.0.1:5432:5432"   # reachable from this machine only
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
