@@ -2,6 +2,65 @@
 
 https://github.com/KaspijaALT/ICS0027
 
+## Project overview
+
+This project is a web based password manager. User registers with a master password and after logging in can store credentials for websites, such as title, username, password, URL and notes. Every entry is encrypted on the server side with AES-256-GCM before it is saved, using a key which is derived from the master password with Argon2id. The database only holds ciphertext of the entries.
+
+Progress note for Checkpoint 2 can be found in [docs/checkpoint-2.md](docs/checkpoint-2.md).
+
+## How to run locally
+
+Project requires Python 3.11 or newer. SQLite is used as the default database, so no additional database installation is needed for running the application.
+
+```bash
+git clone https://github.com/KaspijaALT/ICS0027.git
+cd ICS0027
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python scripts/make_cert.py      # only needed the first time
+python run.py
+```
+
+After starting, the application is available at https://localhost:8443. Given certificate is self-signed, therefore the browser shows a warning on the first visit and the user has to continue to localhost. Commands have to be run from the project folder. Data is saved in the vault.db file.
+
+PostgreSQL can be used instead of SQLite by starting the database with Docker and setting the DATABASE_URL variable:
+
+```bash
+docker compose up -d
+export DATABASE_URL=postgresql+psycopg://spm:spm_dev_password@localhost:5432/spm
+python run.py
+```
+
+Tests are run with `python -m pytest -v`.
+
+## Routes
+
+| Method | Path | Description |
+|---|---|---|
+| GET, POST | /register | Create an account |
+| GET, POST | /login | Log in |
+| POST | /logout | Log out |
+| GET | /vault | List of the user's entries |
+| GET, POST | /vault/new | Add an entry |
+| GET | /vault/{id} | View an entry |
+| GET, POST | /vault/{id}/edit | Edit an entry |
+| POST | /vault/{id}/delete | Delete an entry |
+
+## Project structure
+
+```
+app/main.py            routes of the application
+app/crypto.py          Argon2id hashing, key derivation and AES-256-GCM encryption
+app/sessions.py        session management (kept in server memory)
+app/database.py        database connection and tables
+app/templates/         HTML pages
+app/static/            CSS and fonts
+run.py                 starts the server over HTTPS
+scripts/make_cert.py   creates the development certificate
+tests/test_app.py      tests
+```
+
 ## Threat model
 
 | Threat Category | Attack Vector (Weeks 1–4) | Technical Threat Scenario | Intended Mitigation Strategy |
