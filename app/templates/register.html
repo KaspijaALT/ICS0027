@@ -3,6 +3,7 @@
 <div class="card narrow">
   <h1>Create account</h1>
   <form method="post" action="/register">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>Username <input name="username" value="{{ username or '' }}" required></label>
     <label>Master password (at least 12 characters)
       <input type="password" name="password" required minlength="12">

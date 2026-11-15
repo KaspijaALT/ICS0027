@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -18,6 +19,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 # __Host- prefix: browser only accepts the cookie over https
 COOKIE_NAME = "__Host-session"
+CSRF_COOKIE_NAME = "__Host-csrf"
 
 
 @app.middleware("http")
@@ -31,7 +33,18 @@ async def add_security_headers(request, call_next):
 
 
 def show(request, template, **values):
-    return templates.TemplateResponse(request, template, values)
+    csrf_token = request.cookies.get(CSRF_COOKIE_NAME) or secrets.token_urlsafe(32)
+    values["csrf_token"] = csrf_token
+    response = templates.TemplateResponse(request, template, values)
+    if request.cookies.get(CSRF_COOKIE_NAME) != csrf_token:
+        response.set_cookie(
+            CSRF_COOKIE_NAME,
+            csrf_token,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+        )
+    return response
 
 
 def redirect(url):
@@ -42,6 +55,12 @@ def current_session(request):
     return get_session(request.cookies.get(COOKIE_NAME))
 
 
+def require_csrf(request, csrf_token):
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME, "")
+    if not cookie_token or not csrf_token or not secrets.compare_digest(cookie_token, csrf_token):
+        raise HTTPException(status_code=403, detail="Invalid or missing CSRF token.")
+
+
 def log_in(request, user, password):
     # remove the old session and make a new token (session fixation)
     delete_session(request.cookies.get(COOKIE_NAME))
@@ -50,6 +69,13 @@ def log_in(request, user, password):
 
     response = redirect("/vault")
     response.set_cookie(COOKIE_NAME, token, httponly=True, secure=True, samesite="strict")
+    response.set_cookie(
+        CSRF_COOKIE_NAME,
+        secrets.token_urlsafe(32),
+        httponly=True,
+        secure=True,
+        samesite="strict",
+    )
     return response
 
 
@@ -98,7 +124,9 @@ def register(
     username: str = Form(""),
     password: str = Form(""),
     password2: str = Form(""),
+    csrf_token: str = Form(""),
 ):
+    require_csrf(request, csrf_token)
     username = username.strip().lower()
     error = check_registration(username, password, password2)
     if error:
@@ -124,7 +152,13 @@ def login_page(request: Request):
 
 
 @app.post("/login")
-def login(request: Request, username: str = Form(""), password: str = Form("")):
+def login(
+    request: Request,
+    username: str = Form(""),
+    password: str = Form(""),
+    csrf_token: str = Form(""),
+):
+    require_csrf(request, csrf_token)
     username = username.strip().lower()
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.username == username))
@@ -136,10 +170,12 @@ def login(request: Request, username: str = Form(""), password: str = Form("")):
 
 
 @app.post("/logout")
-def logout(request: Request):
+def logout(request: Request, csrf_token: str = Form("")):
+    require_csrf(request, csrf_token)
     delete_session(request.cookies.get(COOKIE_NAME))
     response = redirect("/login")
     response.delete_cookie(COOKIE_NAME, httponly=True, secure=True, samesite="strict")
+    response.delete_cookie(CSRF_COOKIE_NAME, httponly=True, secure=True, samesite="strict")
     return response
 
 
@@ -175,7 +211,9 @@ def new_entry(
     password: str = Form(""),
     url: str = Form(""),
     notes: str = Form(""),
+    csrf_token: str = Form(""),
 ):
+    require_csrf(request, csrf_token)
     session = current_session(request)
     if session is None:
         return redirect("/login")
@@ -226,7 +264,9 @@ def edit_entry(
     password: str = Form(""),
     url: str = Form(""),
     notes: str = Form(""),
+    csrf_token: str = Form(""),
 ):
+    require_csrf(request, csrf_token)
     session = current_session(request)
     if session is None:
         return redirect("/login")
@@ -247,7 +287,8 @@ def edit_entry(
 
 
 @app.post("/vault/{entry_id}/delete")
-def delete_entry(request: Request, entry_id: int):
+def delete_entry(request: Request, entry_id: int, csrf_token: str = Form("")):
+    require_csrf(request, csrf_token)
     session = current_session(request)
     if session is None:
         return redirect("/login")

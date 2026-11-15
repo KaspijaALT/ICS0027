@@ -8,6 +8,7 @@
   <h1>New entry</h1>
   <form method="post" action="/vault/new">
   {% endif %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>Title <input name="title" value="{{ entry.title or '' }}" required></label>
     <label>Username <input name="username" value="{{ entry.username or '' }}"></label>
     <label>Password <input type="password" name="password" value="{{ entry.password or '' }}"></label>

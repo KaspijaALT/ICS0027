@@ -11,6 +11,7 @@
     <a href="/" class="brand">Secure Password Manager</a>
     {% if session %}
     <form method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       {{ session.username }}
       <button type="submit" class="link">Log out</button>
     </form>

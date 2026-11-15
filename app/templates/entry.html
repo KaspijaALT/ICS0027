@@ -17,6 +17,7 @@
   {% if entry.notes %}<p class="notes"><b>Notes:</b> {{ entry.notes }}</p>{% endif %}
 
   <form method="post" action="/vault/{{ entry_id }}/delete">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit" class="danger">Delete entry</button>
   </form>
 </div>

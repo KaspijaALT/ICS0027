@@ -3,6 +3,7 @@
 <div class="card narrow">
   <h1>Log in</h1>
   <form method="post" action="/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>Username <input name="username" value="{{ username or '' }}" required></label>
     <label>Master password <input type="password" name="password" required></label>
     <button type="submit">Log in</button>
