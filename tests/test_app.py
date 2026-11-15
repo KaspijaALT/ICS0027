@@ -147,7 +147,39 @@ def test_javascript_url_rejected(client):
         "/vault/new",
         data={"title": "x", "url": "javascript:alert(1)", **csrf_data(client)},
     )
-    assert "URL must start with" in response.text
+    assert "valid http:// or https:// URL" in response.text
+
+
+def test_vault_fields_have_length_limits(client):
+    register(client)
+    response = client.post(
+        "/vault/new",
+        data={"title": "x" * 201, **csrf_data(client)},
+    )
+    assert "Title must be 200 characters or fewer." in response.text
+
+    with SessionLocal() as db:
+        assert db.scalars(select(Entry)).all() == []
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://",
+        "https://example.com:99999",
+        "https://user:password@example.com",
+        "https://example.com path",
+    ],
+)
+def test_invalid_http_urls_rejected(client, url):
+    register(client)
+    response = client.post(
+        "/vault/new",
+        data={"title": "Example", "url": url, **csrf_data(client)},
+    )
+    assert "valid http:// or https:// URL" in response.text
+    with SessionLocal() as db:
+        assert db.scalars(select(Entry)).all() == []
 
 
 def test_csrf_rejects_missing_tokens_for_state_changes(client):

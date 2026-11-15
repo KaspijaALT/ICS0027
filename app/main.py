@@ -1,5 +1,6 @@
 import os
 import secrets
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -20,6 +21,13 @@ templates = Jinja2Templates(directory="app/templates")
 # __Host- prefix: browser only accepts the cookie over https
 COOKIE_NAME = "__Host-session"
 CSRF_COOKIE_NAME = "__Host-csrf"
+ENTRY_FIELD_LIMITS = {
+    "title": 200,
+    "username": 256,
+    "password": 4096,
+    "url": 2048,
+    "notes": 10000,
+}
 
 
 @app.middleware("http")
@@ -90,11 +98,30 @@ def check_registration(username, password, password2):
 
 
 def check_entry(data):
-    if not data["title"]:
+    if not data["title"].strip():
         return "Title is required."
-    # only allow normal links, so javascript: urls can't be saved
-    if data["url"] and not data["url"].startswith(("https://", "http://")):
-        return "URL must start with https:// or http://"
+    for field, limit in ENTRY_FIELD_LIMITS.items():
+        if len(data[field]) > limit:
+            return f"{field.capitalize()} must be {limit} characters or fewer."
+    if any("\x00" in value for value in data.values()):
+        return "Fields must not contain null characters."
+    if data["url"]:
+        try:
+            parsed_url = urlsplit(data["url"])
+            port = parsed_url.port
+            valid_url = (
+                parsed_url.scheme.lower() in {"http", "https"}
+                and bool(parsed_url.hostname)
+                and parsed_url.username is None
+                and parsed_url.password is None
+                and (port is None or 1 <= port <= 65535)
+                and not any(char.isspace() for char in data["url"])
+                and not any(ord(char) < 32 or ord(char) == 127 for char in data["url"])
+            )
+        except ValueError:
+            valid_url = False
+        if not valid_url:
+            return "URL must be a valid http:// or https:// URL without embedded credentials."
     return None
 
 
