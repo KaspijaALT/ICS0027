@@ -1,5 +1,7 @@
 # run with: python -m pytest -v
 
+import json
+import logging
 import os
 import time
 
@@ -10,7 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.database import Base, Entry, SessionLocal, User, engine
-from app.main import COOKIE_NAME, CSRF_COOKIE_NAME, app
+from app.main import COOKIE_NAME, CSRF_COOKIE_NAME, app, security_logger
 from app.sessions import sessions
 
 PASSWORD = "correct horse battery staple"
@@ -23,6 +25,21 @@ def client():
     sessions.clear()
     # https, otherwise the Secure cookie isn't sent back
     return TestClient(app, base_url="https://testserver")
+
+
+@pytest.fixture
+def security_logs():
+    messages = []
+
+    class CaptureHandler(logging.Handler):
+        def emit(self, record):
+            messages.append(self.format(record))
+
+    handler = CaptureHandler()
+    handler.setFormatter(security_logger.handlers[0].formatter)
+    security_logger.addHandler(handler)
+    yield messages
+    security_logger.removeHandler(handler)
 
 
 def register(client, username="alice"):
@@ -68,6 +85,25 @@ def test_wrong_password(client):
         data={"username": "alice", "password": "wrong", **csrf_data(client)},
     )
     assert "Wrong username or password." in response.text
+
+
+def test_failed_login_is_logged_without_credentials(client, security_logs):
+    client.get("/login")
+    client.post(
+        "/login",
+        data={
+            "username": "private-user",
+            "password": "do-not-log-this-password",
+            **csrf_data(client),
+        },
+    )
+
+    event = json.loads(security_logs[-1])
+    assert event["event"] == "login_rejected"
+    assert event["method"] == "POST"
+    assert event["path"] == "/login"
+    assert "private-user" not in security_logs[-1]
+    assert "do-not-log-this-password" not in security_logs[-1]
 
 
 def test_sql_injection_in_login(client):
@@ -223,3 +259,26 @@ def test_security_headers(client):
     headers = client.get("/login").headers
     assert "default-src 'self'" in headers["content-security-policy"]
     assert "strict-transport-security" in headers
+
+
+def test_unexpected_error_returns_generic_response_and_structured_log(client, security_logs):
+    register(client)
+    entry_id = add_entry(client)
+    with SessionLocal() as db:
+        entry = db.get(Entry, entry_id)
+        entry.ciphertext = b"invalid ciphertext"
+        db.commit()
+
+    error_client = TestClient(app, base_url="https://testserver", raise_server_exceptions=False)
+    error_client.cookies.update(client.cookies)
+    response = error_client.get(f"/vault/{entry_id}")
+
+    assert response.status_code == 500
+    assert response.text == "An internal error occurred."
+    event = json.loads(security_logs[-1])
+    assert event["event"] == "request_failed"
+    assert event["method"] == "GET"
+    assert event["path"] == f"/vault/{entry_id}"
+    assert event["status_code"] == 500
+    assert event["error_type"] == "InvalidTag"
+    assert "S3cret!" not in security_logs[-1]

@@ -1,9 +1,12 @@
+import json
+import logging
 import os
 import secrets
+from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -28,6 +31,41 @@ ENTRY_FIELD_LIMITS = {
     "url": 2048,
     "notes": 10000,
 }
+
+
+class StructuredFormatter(logging.Formatter):
+    def format(self, record):
+        event = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "level": record.levelname,
+            "event": getattr(record, "event", record.getMessage()),
+        }
+        for field in ("method", "path", "status_code", "error_type", "user_id", "entry_id"):
+            value = getattr(record, field, None)
+            if value is not None:
+                event[field] = value
+        return json.dumps(event)
+
+
+security_logger = logging.getLogger("app.security")
+security_logger.setLevel(logging.INFO)
+security_logger.propagate = False
+if not security_logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(StructuredFormatter())
+    security_logger.addHandler(handler)
+
+
+def log_security_event(event, request, **fields):
+    security_logger.warning(
+        event,
+        extra={
+            "event": event,
+            "method": request.method,
+            "path": request.url.path,
+            **fields,
+        },
+    )
 
 
 @app.middleware("http")
@@ -66,6 +104,7 @@ def current_session(request):
 def require_csrf(request, csrf_token):
     cookie_token = request.cookies.get(CSRF_COOKIE_NAME, "")
     if not cookie_token or not csrf_token or not secrets.compare_digest(cookie_token, csrf_token):
+        log_security_event("csrf_rejected", request)
         raise HTTPException(status_code=403, detail="Invalid or missing CSRF token.")
 
 
@@ -131,6 +170,14 @@ def find_entry(db, entry_id, session):
         select(Entry).where(Entry.id == entry_id, Entry.user_id == session["user_id"])
     )
     if entry is None:
+        security_logger.warning(
+            "entry_access_denied",
+            extra={
+                "event": "entry_access_denied",
+                "user_id": session["user_id"],
+                "entry_id": entry_id,
+            },
+        )
         raise HTTPException(status_code=404)
     return entry
 
@@ -192,6 +239,7 @@ def login(
 
     # same message for both cases so you can't tell which usernames exist
     if user is None or not crypto.check_password(user.password_hash, password):
+        log_security_event("login_rejected", request)
         return show(request, "login.html", error="Wrong username or password.", username=username)
     return log_in(request, user, password)
 
@@ -324,3 +372,18 @@ def delete_entry(request: Request, entry_id: int, csrf_token: str = Form("")):
         db.delete(find_entry(db, entry_id, session))
         db.commit()
     return redirect("/vault")
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected_error(request: Request, exc: Exception):
+    security_logger.error(
+        "request_failed",
+        extra={
+            "event": "request_failed",
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": 500,
+            "error_type": type(exc).__name__,
+        },
+    )
+    return HTMLResponse("An internal error occurred.", status_code=500)
